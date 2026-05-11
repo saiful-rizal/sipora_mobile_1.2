@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "301258608651",
+    "firebase_url": "https://sipora-73236-default-rtdb.firebaseio.com",
+    "project_id": "sipora-73236",
+    "storage_bucket": "sipora-73236.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:301258608651:android:1ac00655ebd9bea4b0b70e",
+        "android_client_info": {
+          "package_name": "com.example.sipora"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "301258608651-npm1c6a6cvbonm8ulv30hi2l76u9nntu.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAzj8M7eq6RNndOVzc4cuDXIHL6t3N3Dt8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "301258608651-npm1c6a6cvbonm8ulv30hi2l76u9nntu.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
