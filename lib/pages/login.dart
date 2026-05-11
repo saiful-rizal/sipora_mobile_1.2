@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import '../app/routes/app_routes.dart';
 import '../controllers/login_controller.dart';
 import '../services/app_session_service.dart';
+import '../services/localhost_api_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -518,43 +519,36 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                 setState(() => _isResettingPassword = true);
 
                                 try {
-                                  // ✅ LOGIKA INTI: MENGIRIM EMAIL DARI FIREBASE
-                                  await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
-                                  
+                                  // ✅ KIRIM REQUEST KE API CUSTOM (bukan Firebase)
+                                  // API akan simpan token ke DB & kirim email berisi link reset
+                                  final api = LocalhostApiService();
+                                  final result = await api.post(
+                                    'sipora_api.php',
+                                    query: {'action': 'forgot_password'},
+                                    body: {'email': email},
+                                  );
+
                                   if (!mounted) return;
                                   setState(() => _isResettingPassword = false);
-                                  
+
                                   resetCtrl.dispose();
-                                  Navigator.pop(context); 
-                                  _showResetEmailSentDialog(email);
-                                  
-                                } on FirebaseAuthException catch (e) {
-                                  if (!mounted) return;
-                                  setState(() => _isResettingPassword = false);
-                                  
-                                  resetCtrl.dispose();
-                                  Navigator.pop(context); 
-                                  
-                                  // Menampilkan pesan error spesifik dari Firebase
-                                  String errorMessage = 'Gagal mengirim link reset.';
-                                  if (e.code == 'user-not-found') {
-                                    errorMessage = 'Email ini tidak terdaftar di aplikasi.';
-                                  } else if (e.code == 'invalid-email') {
-                                    errorMessage = 'Format email tidak valid.';
-                                  } else if (e.code == 'too-many-requests') {
-                                    errorMessage = 'Terlalu banyak percobaan. Coba lagi nanti.';
+                                  Navigator.pop(context);
+
+                                  if (result['success'] == true) {
+                                    _showResetEmailSentDialog(email);
                                   } else {
-                                    errorMessage = e.message ?? errorMessage;
+                                    _showErrorDialog(
+                                      message: result['message']?.toString() ??
+                                          'Gagal mengirim link reset.',
+                                    );
                                   }
-                                  
-                                  _showErrorDialog(message: errorMessage);
                                 } catch (e) {
                                   if (!mounted) return;
                                   setState(() => _isResettingPassword = false);
-                                  
+
                                   resetCtrl.dispose();
-                                  Navigator.pop(context); 
-                                  
+                                  Navigator.pop(context);
+
                                   _showErrorDialog(
                                     message: 'Gagal menghubungi server. Periksa koneksi internet Anda.',
                                   );
