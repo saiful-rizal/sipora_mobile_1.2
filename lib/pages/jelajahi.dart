@@ -26,38 +26,48 @@ class _JelajahiPageState extends State<JelajahiPage>
   List<Map<String, dynamic>> _documents = [];
 
   List<String> _yearList = List.generate(
-    5,
-    (index) => (DateTime.now().year - index).toString(),
-  );
+  10,
+  (index) => (DateTime.now().year - index).toString(),
+);
+
   List<String> _fieldList = [
     'Semua Bidang',
     'Teknologi Informasi',
-    'Teknik Sipil',
-    'Teknik Elektro',
-    'Bisnis dan Manajemen',
+    'Teknik',
+    'Teknologi Pertanian',
+    'Produksi Pertanian',
+    'Peternakan',
+    'Kesehatan',
+    'Bahasa, Komunikasi, dan Pariwisata',
+    'Bisnis',
   ];
 
   final List<Map<String, dynamic>> _categories = [
-    {'icon': Icons.menu_book_rounded, 'label': 'Skripsi', 'count': '5,098'},
-    {'icon': Icons.school_rounded, 'label': 'Tesis', 'count': '3,435'},
-    {'icon': Icons.article_rounded, 'label': 'Dokumen', 'count': '9,908'},
-  ];
+  {'icon': Icons.menu_book_rounded,      'label': 'Skripsi',        'count': '0'},
+  {'icon': Icons.school_rounded,         'label': 'Tesis',          'count': '0'},
+  {'icon': Icons.science_rounded,        'label': 'KTI',            'count': '0'},
+  {'icon': Icons.assignment_rounded,     'label': 'Tugas Akhir',    'count': '0'},
+  {'icon': Icons.work_outline_rounded,   'label': 'Laporan Magang', 'count': '0'},
+  {'icon': Icons.article_rounded,        'label': 'Semua',          'count': '0'},
+];
 
-  List<Map<String, dynamic>> get _filteredDocuments {
-    final selectedLabel =
-        _categories[_selectedCategoryIndex]['label'] as String;
-    if (selectedLabel == 'Dokumen') {
-      return _documents;
-    }
-    return _documents
-        .where(
-          (doc) =>
-              (doc['type']?.toString() ?? '').toLowerCase() ==
-              selectedLabel.toLowerCase(),
-        )
-        .toList();
+List<Map<String, dynamic>> get _filteredDocuments {
+  final selectedLabel =
+      _categories[_selectedCategoryIndex]['label'] as String;
+
+  // Kategori "Semua" tampilkan semua dokumen
+  if (selectedLabel == 'Semua') {
+    return _documents;
   }
 
+  return _documents
+      .where(
+        (doc) =>
+            (doc['type']?.toString() ?? '').toLowerCase() ==
+            selectedLabel.toLowerCase(),
+      )
+      .toList();
+}
   @override
   void initState() {
     super.initState();
@@ -69,75 +79,88 @@ class _JelajahiPageState extends State<JelajahiPage>
   }
 
   Future<void> _loadInitialData() async {
-    try {
-      final lookup = await _apiService.fetchLookupOptions();
-      final years = (lookup['tahun'] as List?)?.map((e) => '$e').toList() ?? [];
-      final jurusan =
-          (lookup['jurusan'] as List?)?.map((e) => '$e').toList() ?? [];
+  try {
+    final lookup = await _apiService.fetchLookupOptions();
+    final years   = (lookup['tahun']   as List?)?.map((e) => '$e').toList() ?? [];
+    final jurusan = (lookup['jurusan'] as List?)?.map((e) => '$e').toList() ?? [];
 
-      if (mounted) {
-        setState(() {
-          if (years.isNotEmpty) {
-            _yearList = years;
-          }
-          if (jurusan.isNotEmpty) {
-            _fieldList = ['Semua Bidang', ...jurusan];
-          }
-        });
-      }
-      await _loadDocuments();
-    } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _loadDocuments() async {
-    try {
-      final docs = await _apiService.fetchBrowseDocuments(
-        year: _selectedYear,
-        jurusan: _selectedField == 'Semua Bidang' ? null : _selectedField,
-      );
-
-      final palette = [Colors.blue, Colors.purple, Colors.orange, Colors.teal];
-      final mappedDocs = docs.asMap().entries.map((entry) {
-        final idx = entry.key;
-        final item = Map<String, dynamic>.from(entry.value);
-        item['title'] = item['title']?.toString() ?? '-';
-        item['author'] = item['author']?.toString() ?? 'Unknown';
-        item['date'] = item['date']?.toString() ?? '-';
-        item['downloads'] = (item['downloads'] as num?)?.toInt() ?? 0;
-        item['type'] = item['type']?.toString() ?? 'Dokumen';
-        item['status'] =
-            item['status']?.toString() ?? item['jurusan']?.toString() ?? '-';
-        item['color'] = palette[idx % palette.length];
-        return item;
-      }).toList();
-
-      final total = mappedDocs.length;
-      final skripsiCount = mappedDocs
-          .where(
-            (doc) => (doc['type']?.toString() ?? '').toLowerCase() == 'skripsi',
-          )
-          .length;
-      final tesisCount = mappedDocs
-          .where(
-            (doc) => (doc['type']?.toString() ?? '').toLowerCase() == 'tesis',
-          )
-          .length;
-
-      if (!mounted) return;
+    if (mounted) {
       setState(() {
-        _documents = mappedDocs;
-        _categories[0]['count'] = '$skripsiCount';
-        _categories[1]['count'] = '$tesisCount';
-        _categories[2]['count'] = '$total';
-        _isLoading = false;
+        // Hanya override jika API mengembalikan data
+        // Jika API kosong, fallback ke nilai default di atas
+        if (years.isNotEmpty)   _yearList  = years;
+        if (jurusan.isNotEmpty) _fieldList = ['Semua Bidang', ...jurusan];
       });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
     }
+    await _loadDocuments();
+  } catch (_) {
+    // Jika API gagal, nilai default di atas tetap dipakai
+    if (mounted) setState(() => _isLoading = false);
   }
+}
+  Future<void> _loadDocuments() async {
+  try {
+    final docs = await _apiService.fetchBrowseDocuments(
+      year: _selectedYear,
+      jurusan: _selectedField == 'Semua Bidang' ? null : _selectedField,
+    );
+
+    final palette = [
+      Colors.blue,
+      Colors.purple,
+      Colors.orange,
+      Colors.teal,
+      Colors.green,
+    ];
+
+    final mappedDocs = docs.asMap().entries.map((entry) {
+      final idx  = entry.key;
+      final item = Map<String, dynamic>.from(entry.value);
+      item['title']     = item['title']?.toString() ?? '-';
+      item['author']    = item['author']?.toString() ?? 'Unknown';
+      item['date']      = item['date']?.toString() ?? '-';
+      item['downloads'] = (item['downloads'] as num?)?.toInt() ?? 0;
+      item['type']      = item['type']?.toString() ?? 'Dokumen';
+      item['status']    = item['status']?.toString() ?? item['jurusan']?.toString() ?? '-';
+      item['color']     = palette[idx % palette.length];
+      return item;
+    }).toList();
+
+    // Hitung count per kategori
+    int countSkripsi      = 0;
+    int countTesis        = 0;
+    int countKti          = 0;
+    int countTugasAkhir   = 0;
+    int countLapMagang    = 0;
+
+    for (final doc in mappedDocs) {
+      final type = (doc['type']?.toString() ?? '').toLowerCase();
+      if (type == 'skripsi')           countSkripsi++;
+      else if (type == 'tesis')        countTesis++;
+      else if (type == 'kti')          countKti++;
+      else if (type == 'tugas akhir')  countTugasAkhir++;
+      else if (type == 'laporan magang') countLapMagang++;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _documents = mappedDocs;
+
+      // Update count sesuai urutan _categories
+      _categories[0]['count'] = '$countSkripsi';
+      _categories[1]['count'] = '$countTesis';
+      _categories[2]['count'] = '$countKti';
+      _categories[3]['count'] = '$countTugasAkhir';
+      _categories[4]['count'] = '$countLapMagang';
+      _categories[5]['count'] = '${mappedDocs.length}'; // Semua
+
+      _isLoading = false;
+    });
+  } catch (_) {
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+  }
+}
 
   @override
   void dispose() {
@@ -326,7 +349,7 @@ class _JelajahiPageState extends State<JelajahiPage>
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
+                        color:Colors.black.withOpacity(0.2),
                         blurRadius: 28,
                         offset: const Offset(0, 12),
                       ),
@@ -583,85 +606,82 @@ class _JelajahiPageState extends State<JelajahiPage>
   // ==========================================
   // CARD KATEGORI YANG SUDAH 100% RESPONSIF
   // ==========================================
-  Widget _buildCategoryFilters() {
-    return Container(
-      margin: EdgeInsets.only(top: _getWidth(0.02), bottom: _getWidth(0.02)),
+ Widget _buildCategoryFilters() {
+  return Container(
+    margin: EdgeInsets.only(top: _getWidth(0.02), bottom: _getWidth(0.02)),
+    height: _getWidth(0.26),
+    child: ListView.builder(
+      scrollDirection: Axis.horizontal,
       padding: EdgeInsets.symmetric(horizontal: _getWidth(0.04)),
-      // ✅ GANTI LISTVIEW MENJADI ROW AGAR LEBAR NYA MENYESUAIKAN LAYAR OTOMATIS
-      child: Row(
-        children: List.generate(_categories.length, (index) {
-          bool isSelected = _selectedCategoryIndex == index;
-          return Expanded(
-            child: GestureDetector(
-              onTap: () => setState(() => _selectedCategoryIndex = index),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                // ✅ HAPUS WIDTH TETAP, PAKAI MARGIN DINAMIS ANTAR CARD
-                margin: EdgeInsets.only(
-                  right: index < _categories.length - 1 ? _getWidth(0.02) : 0,
+      itemCount: _categories.length,
+      itemBuilder: (context, index) {
+        final isSelected = _selectedCategoryIndex == index;
+        return GestureDetector(
+          onTap: () => setState(() => _selectedCategoryIndex = index),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            width: _getWidth(0.27),
+            margin: EdgeInsets.only(right: _getWidth(0.025)),
+            padding: EdgeInsets.symmetric(vertical: _getWidth(0.02)),
+            decoration: BoxDecoration(
+              color: isSelected ? const Color(0xFF1565C0) : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: isSelected
+                      ? const Color(0xFF1565C0).withValues(alpha: 0.3)
+                      : Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
                 ),
-                padding: EdgeInsets.symmetric(vertical: _getWidth(0.025)),
-                decoration: BoxDecoration(
-                  color: isSelected ? const Color(0xFF1565C0) : Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: isSelected
-                          ? const Color(0xFF1565C0).withOpacity(0.3)
-                          : Colors.black.withOpacity(0.04),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(_getWidth(0.015)),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? Colors.white.withOpacity(0.2)
-                            : const Color(0xFF1565C0).withOpacity(0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        _categories[index]['icon'],
-                        color: isSelected
-                            ? Colors.white
-                            : const Color(0xFF1565C0),
-                        size: _getFontSize(20),
-                      ),
-                    ),
-                    SizedBox(height: _getWidth(0.015)),
-                    Text(
-                      _categories[index]['label'],
-                      style: TextStyle(
-                        fontSize: _getFontSize(12),
-                        fontWeight: FontWeight.w600,
-                        color: isSelected
-                            ? Colors.white
-                            : const Color(0xFF1E3A5F),
-                      ),
-                    ),
-                    Text(
-                      _categories[index]['count'],
-                      style: TextStyle(
-                        fontSize: _getFontSize(10),
-                        color: isSelected
-                            ? Colors.white.withOpacity(0.8)
-                            : Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              ],
             ),
-          );
-        }),
-      ),
-    );
-  }
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(_getWidth(0.015)),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? Colors.white.withValues(alpha: 0.2)
+                        : const Color(0xFF1565C0).withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    _categories[index]['icon'],
+                    color: isSelected ? Colors.white : const Color(0xFF1565C0),
+                    size: _getFontSize(18),
+                  ),
+                ),
+                SizedBox(height: _getWidth(0.01)),
+                Text(
+                  _categories[index]['label'],
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: _getFontSize(10),
+                    fontWeight: FontWeight.w600,
+                    color: isSelected ? Colors.white : const Color(0xFF1E3A5F),
+                  ),
+                ),
+                Text(
+                  _categories[index]['count'],
+                  style: TextStyle(
+                    fontSize: _getFontSize(9),
+                    color: isSelected
+                        ? Colors.white.withValues(alpha: 0.8)
+                        : Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    ),
+  );
+}
 
   // ==========================================
   // CARD DOKUMEN (TELAH DIOPTIMASI UKURANNYA)
