@@ -750,9 +750,6 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  // ==========================================
-  // HEADER (TIDAK BERUBAH SAMA SEKALI)
-  // ==========================================
   Widget _buildMainHeader() {
     return Container(
       width: double.infinity,
