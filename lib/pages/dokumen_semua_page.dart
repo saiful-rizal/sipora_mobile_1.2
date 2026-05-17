@@ -1,7 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 import '../services/sipora_api_service.dart';
+
+// ─── Helper: warna & icon berdasarkan ekstensi file ───────────────────────────
+
+Color _colorForFile(String filePath) {
+  final ext = filePath.trim().toLowerCase().split('.').last;
+  if (ext == 'pdf') return const Color(0xFFEF4444);              // merah
+  if (['doc', 'docx'].contains(ext)) return const Color(0xFF3B82F6); // biru
+  return const Color(0xFF6B7280);                                 // abu-abu
+}
+
+IconData _iconForFile(String filePath) {
+  final ext = filePath.trim().toLowerCase().split('.').last;
+  if (ext == 'pdf') return Icons.picture_as_pdf_rounded;
+  if (['doc', 'docx'].contains(ext)) return Icons.description_rounded;
+  return Icons.insert_drive_file_rounded;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 class SemuaDokumenPage extends StatefulWidget {
   const SemuaDokumenPage({super.key});
@@ -37,17 +56,13 @@ class _SemuaDokumenPageState extends State<SemuaDokumenPage> {
   Future<void> _loadDocuments() async {
     try {
       final docs = await _apiService.fetchBrowseDocuments();
-      final palette = [
-        const Color(0xFF4F46E5),
-        const Color(0xFF10B981),
-        const Color(0xFFF59E0B),
-        const Color(0xFFEF4444),
-      ];
 
       final mappedDocs = docs.asMap().entries.map((entry) {
-        final index = entry.key;
         final item = Map<String, dynamic>.from(entry.value);
+        final filePath =
+            (item['file_url'] ?? item['file_path'] ?? '').toString();
         return {
+          'dokumen_id': item['dokumen_id'],
           'id': item['id'],
           'title': (item['title'] ?? '-').toString(),
           'author': (item['author'] ?? '-').toString(),
@@ -56,8 +71,8 @@ class _SemuaDokumenPageState extends State<SemuaDokumenPage> {
           'type': (item['type'] ?? 'Dokumen').toString(),
           'status': (item['status'] ?? '-').toString(),
           'prodi': (item['prodi'] ?? '-').toString(),
-          'file_path': (item['file_path'] ?? '').toString(),
-          'color': palette[index % palette.length],
+          'file_path': filePath,
+          'color': _colorForFile(filePath), // ← warna dari ekstensi
         };
       }).toList();
 
@@ -102,6 +117,11 @@ class _SemuaDokumenPageState extends State<SemuaDokumenPage> {
       return;
     }
 
+    final id = doc['dokumen_id'];
+    if (id != null) {
+      await _apiService.incrementDownload(id as int);
+    }
+
     final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!launched && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -127,6 +147,7 @@ class _SemuaDokumenPageState extends State<SemuaDokumenPage> {
       body: SafeArea(
         child: Column(
           children: [
+            // ── Header ──────────────────────────────────────────────────────
             Container(
               padding: EdgeInsets.fromLTRB(
                 _w(0.04),
@@ -176,6 +197,8 @@ class _SemuaDokumenPageState extends State<SemuaDokumenPage> {
                 ],
               ),
             ),
+
+            // ── Search ──────────────────────────────────────────────────────
             Padding(
               padding: EdgeInsets.fromLTRB(
                 _w(0.04),
@@ -191,7 +214,8 @@ class _SemuaDokumenPageState extends State<SemuaDokumenPage> {
                   prefixIcon: const Icon(Icons.search_rounded),
                   filled: true,
                   fillColor: Colors.white,
-                  contentPadding: EdgeInsets.symmetric(vertical: _w(0.035)),
+                  contentPadding:
+                      EdgeInsets.symmetric(vertical: _w(0.035)),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
                     borderSide: BorderSide.none,
@@ -199,40 +223,43 @@ class _SemuaDokumenPageState extends State<SemuaDokumenPage> {
                 ),
               ),
             ),
+
+            // ── List ────────────────────────────────────────────────────────
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _filteredDocuments.isEmpty
-                  ? Center(
-                      child: Text(
-                        'Tidak ada dokumen yang cocok',
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: _f(13),
+                      ? Center(
+                          child: Text(
+                            'Tidak ada dokumen yang cocok',
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: _f(13),
+                            ),
+                          ),
+                        )
+                      : ListView.separated(
+                          padding: EdgeInsets.fromLTRB(
+                            _w(0.04),
+                            0,
+                            _w(0.04),
+                            _w(0.05),
+                          ),
+                          itemCount: _filteredDocuments.length,
+                          separatorBuilder: (_, __) =>
+                              SizedBox(height: _w(0.02)),
+                          itemBuilder: (context, index) {
+                            final doc = _filteredDocuments[index];
+                            return _DocumentCard(
+                              document: doc,
+                              onOpen: () => _openDocumentDetail(doc),
+                              onDownload: () => _downloadDocument(doc),
+                              width: _w,
+                              fontSize: _f,
+                              resolveUri: _resolveDocumentUri(doc),
+                            );
+                          },
                         ),
-                      ),
-                    )
-                  : ListView.separated(
-                      padding: EdgeInsets.fromLTRB(
-                        _w(0.04),
-                        0,
-                        _w(0.04),
-                        _w(0.05),
-                      ),
-                      itemCount: _filteredDocuments.length,
-                      separatorBuilder: (_, __) => SizedBox(height: _w(0.02)),
-                      itemBuilder: (context, index) {
-                        final doc = _filteredDocuments[index];
-                        return _DocumentCard(
-                          document: doc,
-                          onOpen: () => _openDocumentDetail(doc),
-                          onDownload: () => _downloadDocument(doc),
-                          width: _w,
-                          fontSize: _f,
-                          resolveUri: _resolveDocumentUri(doc),
-                        );
-                      },
-                    ),
             ),
           ],
         ),
@@ -240,6 +267,8 @@ class _SemuaDokumenPageState extends State<SemuaDokumenPage> {
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 class DetailDokumenPage extends StatelessWidget {
   const DetailDokumenPage({
@@ -271,7 +300,13 @@ class DetailDokumenPage extends StatelessWidget {
       return;
     }
 
-    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    final id = document['dokumen_id'];
+    if (id != null) {
+      await apiService.incrementDownload(id as int);
+    }
+
+    final launched =
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!launched && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Gagal membuka file dokumen')),
@@ -279,14 +314,50 @@ class DetailDokumenPage extends StatelessWidget {
     }
   }
 
+  void _preview(BuildContext context) {
+    final filePath = document['file_path']?.toString() ?? '';
+    final uri = _resolveDocumentUri();
+
+    if (uri == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('File dokumen belum tersedia')),
+      );
+      return;
+    }
+
+    if (filePath.toLowerCase().endsWith('.docx') ||
+        filePath.toLowerCase().endsWith('.doc')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'Format DOCX tidak bisa dipreview, gunakan tombol Unduh'),
+        ),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => _PdfPreviewPage(
+          title: document['title']?.toString() ?? 'Dokumen',
+          pdfUrl: uri.toString(),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final color = document['color'] as Color? ?? const Color(0xFF4F46E5);
-    final title = document['title']?.toString() ?? '-';
-    final author = document['author']?.toString() ?? '-';
-    final date = document['date']?.toString() ?? '-';
-    final type = document['type']?.toString() ?? 'Dokumen';
-    final status = document['status']?.toString() ?? '-';
+    final filePath = document['file_path']?.toString() ?? '';
+    final color = _colorForFile(filePath);   // ← dari ekstensi
+    final icon  = _iconForFile(filePath);    // ← dari ekstensi
+
+    final title     = document['title']?.toString()     ?? '-';
+    final author    = document['author']?.toString()    ?? '-';
+    final date      = document['date']?.toString()      ?? '-';
+    final type      = document['type']?.toString()      ?? 'Dokumen';
+    final status    = document['status']?.toString()    ?? '-';
     final downloads = document['downloads']?.toString() ?? '0';
 
     return Scaffold(
@@ -294,6 +365,7 @@ class DetailDokumenPage extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
+            // ── Header ──────────────────────────────────────────────────────
             Container(
               width: double.infinity,
               padding: EdgeInsets.fromLTRB(
@@ -331,6 +403,8 @@ class DetailDokumenPage extends StatelessWidget {
                 ],
               ),
             ),
+
+            // ── Body ────────────────────────────────────────────────────────
             Expanded(
               child: ListView(
                 padding: EdgeInsets.all(_w(context, 0.04)),
@@ -351,6 +425,7 @@ class DetailDokumenPage extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // ── Title row ──────────────────────────────────────
                         Row(
                           children: [
                             Container(
@@ -361,7 +436,7 @@ class DetailDokumenPage extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(18),
                               ),
                               child: Icon(
-                                Icons.description_rounded,
+                                icon,       // ← icon sesuai tipe
                                 color: color,
                                 size: _f(context, 28),
                               ),
@@ -393,6 +468,8 @@ class DetailDokumenPage extends StatelessWidget {
                           ],
                         ),
                         SizedBox(height: _w(context, 0.04)),
+
+                        // ── Meta chips ─────────────────────────────────────
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
@@ -409,18 +486,20 @@ class DetailDokumenPage extends StatelessWidget {
                           ],
                         ),
                         SizedBox(height: _w(context, 0.04)),
+
+                        // ── Download & action ──────────────────────────────
                         Container(
                           padding: EdgeInsets.all(_w(context, 0.04)),
                           decoration: BoxDecoration(
                             color: const Color(0xFFF8FAFD),
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: const Color(0xFFE5EAF2)),
+                            border:
+                                Border.all(color: const Color(0xFFE5EAF2)),
                           ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              Row(
                                 children: [
                                   Text(
                                     downloads,
@@ -430,6 +509,7 @@ class DetailDokumenPage extends StatelessWidget {
                                       color: const Color(0xFF1E3A5F),
                                     ),
                                   ),
+                                  const SizedBox(width: 6),
                                   Text(
                                     'Download',
                                     style: TextStyle(
@@ -439,22 +519,49 @@ class DetailDokumenPage extends StatelessWidget {
                                   ),
                                 ],
                               ),
-                              ElevatedButton.icon(
-                                onPressed: () => _download(context),
-                                icon: const Icon(Icons.file_download_outlined),
-                                label: const Text('Unduh'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: color,
-                                  foregroundColor: Colors.white,
-                                  elevation: 0,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 18,
-                                    vertical: 14,
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      onPressed: () => _preview(context),
+                                      icon: const Icon(
+                                          Icons.visibility_outlined),
+                                      label: const Text('Preview'),
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: color,
+                                        side: BorderSide(color: color),
+                                        elevation: 0,
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 12),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(14),
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      onPressed: () => _download(context),
+                                      icon: const Icon(
+                                          Icons.file_download_outlined),
+                                      label: const Text('Unduh'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: color,
+                                        foregroundColor: Colors.white,
+                                        elevation: 0,
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 12),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(14),
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                ],
                               ),
                             ],
                           ),
@@ -471,6 +578,35 @@ class DetailDokumenPage extends StatelessWidget {
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _PdfPreviewPage extends StatelessWidget {
+  const _PdfPreviewPage({required this.title, required this.pdfUrl});
+
+  final String title;
+  final String pdfUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF1E3A5F),
+        foregroundColor: Colors.white,
+        title: Text(
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+              fontSize: 15, fontWeight: FontWeight.w700),
+        ),
+      ),
+      body: SfPdfViewer.network(pdfUrl),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _DocumentCard extends StatelessWidget {
   const _DocumentCard({
@@ -491,7 +627,9 @@ class _DocumentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = document['color'] as Color? ?? const Color(0xFF4F46E5);
+    final filePath = document['file_path']?.toString() ?? '';
+    final color = _colorForFile(filePath);  // ← dari ekstensi
+    final icon  = _iconForFile(filePath);   // ← dari ekstensi
 
     return Container(
       decoration: BoxDecoration(
@@ -510,6 +648,7 @@ class _DocumentCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ── Title row ────────────────────────────────────────────────
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -521,7 +660,7 @@ class _DocumentCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Icon(
-                    Icons.description_rounded,
+                    icon,        // ← icon sesuai tipe
                     color: color,
                     size: fontSize(24),
                   ),
@@ -556,6 +695,8 @@ class _DocumentCard extends StatelessWidget {
               ],
             ),
             SizedBox(height: width(0.02)),
+
+            // ── Meta chips ───────────────────────────────────────────────
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -575,6 +716,8 @@ class _DocumentCard extends StatelessWidget {
               ],
             ),
             SizedBox(height: width(0.02)),
+
+            // ── Action row ───────────────────────────────────────────────
             Row(
               children: [
                 Icon(
@@ -623,6 +766,8 @@ class _DocumentCard extends StatelessWidget {
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _MetaChip extends StatelessWidget {
   const _MetaChip({required this.label, required this.color});

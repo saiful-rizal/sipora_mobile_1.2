@@ -51,6 +51,7 @@ dependencies:
   shared_preferences: ^2.2.2
   firebase_messaging: ^16.2.0
   flutter_local_notifications: ^21.0.0
+  syncfusion_flutter_pdfviewer: ^27.1.48
 
 dev_dependencies:
   flutter_test:
@@ -62,6 +63,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.13.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -76,6 +78,11 @@ flutter:
   assets:
     - assets/logo-polije.png
     - .env
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon/icon.png"
 
   # To add assets to your application, add an assets section, like this:
   # assets:

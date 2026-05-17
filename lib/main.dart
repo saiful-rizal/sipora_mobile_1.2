@@ -3,7 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:get/get.dart';
-
+import 'services/app_session_service.dart'; 
 import 'app/bindings/initial_binding.dart';
 import 'app/routes/app_pages.dart';
 import 'app/routes/app_routes.dart';
@@ -28,8 +28,8 @@ Future<void> main() async {
   NotificationState.initialize();
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   await PushNotificationService.initialize();
+  await AppSessionService.loadFromStorage(); // ← tambah ini
 
-  // Langsung jalankan MyApp tanpa wrapper DevicePreview
   runApp(const MyApp());
 }
 

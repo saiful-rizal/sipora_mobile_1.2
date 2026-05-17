@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../app/routes/app_routes.dart';
+import '../services/app_session_service.dart';
 
 class LoadingScreen extends StatefulWidget {
   const LoadingScreen({super.key});
@@ -83,8 +84,11 @@ class _LoadingScreenState extends State<LoadingScreen>
     if (!mounted) return;
     await Future.delayed(const Duration(milliseconds: 400));
 
-    // UBAH: Arahkan ke LoginPage (bukan MainPage)
-    Get.offAllNamed(AppRoutes.login);
+    if (AppSessionService.currentUser != null) {
+      Get.offAllNamed(AppRoutes.shell);
+    } else {
+      Get.offAllNamed(AppRoutes.login);
+    }
   }
 
   @override
@@ -123,7 +127,7 @@ class _LoadingScreenState extends State<LoadingScreen>
             right: -size.width * 0.2,
             child: AnimatedBuilder(
               animation: _loopCtrl,
-              builder: (_, _) => Container(
+              builder: (_, __) => Container(
                 height: size.height * 0.6,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
@@ -164,7 +168,7 @@ class _LoadingScreenState extends State<LoadingScreen>
             right: 0,
             child: AnimatedBuilder(
               animation: _barFade,
-              builder: (_, _) => Opacity(
+              builder: (_, __) => Opacity(
                 opacity: _barFade.value,
                 child: Text(
                   '© 2026 Politeknik Negeri Jember',
@@ -215,7 +219,7 @@ class _LoadingScreenState extends State<LoadingScreen>
   Widget _buildLogo(Size size) {
     return AnimatedBuilder(
       animation: Listenable.merge([_logoFade, _logoScale, _loopCtrl]),
-      builder: (_, _) {
+      builder: (_, __) {
         final glow = _loopCtrl.value;
 
         return FadeTransition(
@@ -240,7 +244,7 @@ class _LoadingScreenState extends State<LoadingScreen>
                 ),
                 AnimatedBuilder(
                   animation: _loopCtrl,
-                  builder: (_, _) => Transform.rotate(
+                  builder: (_, __) => Transform.rotate(
                     angle: _loopCtrl.value * math.pi * 0.2,
                     child: CustomPaint(
                       painter: _ArcRingPainter(
@@ -256,7 +260,7 @@ class _LoadingScreenState extends State<LoadingScreen>
                 ),
                 AnimatedBuilder(
                   animation: _loopCtrl,
-                  builder: (_, _) => Transform.rotate(
+                  builder: (_, __) => Transform.rotate(
                     angle: -_loopCtrl.value * math.pi * 0.1,
                     child: CustomPaint(
                       painter: _ArcRingPainter(
@@ -413,7 +417,7 @@ class _LoadingScreenState extends State<LoadingScreen>
 
     return AnimatedBuilder(
       animation: Listenable.merge([_barFade, _shimCtrl]),
-      builder: (_, _) => Opacity(
+      builder: (_, __) => Opacity(
         opacity: _barFade.value,
         child: Column(
           children: [

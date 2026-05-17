@@ -154,17 +154,18 @@ class _DashboardPageState extends State<DashboardPage> {
       ];
 
       final mappedDocs = recent.map((item) {
-        final doc = Map<String, dynamic>.from(item as Map);
-        return {
-          'title': (doc['title'] ?? '-').toString(),
-          'author': (doc['author'] ?? '-').toString(),
-          'downloads': (doc['downloads'] ?? 0).toString(),
-          'date': (doc['date'] ?? '-').toString(),
-          'category': (doc['category'] ?? 'Dokumen').toString(),
-          'color': const Color(0xFF4F46E5),
-          'file_path': (doc['file_path'] ?? '').toString(),
-        };
-      }).toList();
+  final doc = Map<String, dynamic>.from(item as Map);
+  return {
+    'dokumen_id': doc['dokumen_id'],  // ← tambah ini
+    'title': (doc['title'] ?? '-').toString(),
+    'author': (doc['author'] ?? '-').toString(),
+    'downloads': (doc['downloads'] ?? 0).toString(),
+    'date': (doc['date'] ?? '-').toString(),
+    'category': (doc['category'] ?? 'Dokumen').toString(),
+    'color': const Color(0xFF4F46E5),
+    'file_path': (doc['file_path'] ?? '').toString(),
+  };
+}).toList();
 
       final mappedTopics = topTopicsRaw
           .map((item) {
@@ -199,23 +200,27 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Future<void> _downloadDocument(Map<String, dynamic> doc) async {
-    final uri = _resolveDocumentUri(doc);
-    if (uri == null) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('File dokumen belum tersedia')),
-      );
-      return;
-    }
-
-    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!launched && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Gagal membuka file dokumen')),
-      );
-    }
+  final uri = _resolveDocumentUri(doc);
+  if (uri == null) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('File dokumen belum tersedia')),
+    );
+    return;
   }
 
+  final id = doc['dokumen_id'];
+  if (id != null) {
+    await _apiService.incrementDownload(id as int);
+  }
+
+  final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+  if (!launched && mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Gagal membuka file dokumen')),
+    );
+  }
+}
   bool get _cameraSupported {
     if (kIsWeb) return false;
     return defaultTargetPlatform == TargetPlatform.android ||
@@ -324,16 +329,17 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Future<void> _handleLogout() async {
-    try {
-      await GoogleAuthService().signOut();
-    } catch (_) {}
+  try {
+    await GoogleAuthService().signOut();
+  } catch (_) {}
 
-    AppSessionService.clear();
-    await PushNotificationService.clearCurrentDeviceToken();
+  await AppSessionService.clear(); // ← tambah await
 
-    if (!mounted) return;
-    Get.offAllNamed(AppRoutes.login);
-  }
+  await PushNotificationService.clearCurrentDeviceToken();
+
+  if (!mounted) return;
+  Get.offAllNamed(AppRoutes.login);
+}
 
   String _statValueByTitle(String title) {
     for (final item in _stats) {

@@ -45,7 +45,9 @@ class LoginController extends GetxController {
       print(rawData.toString());
 
       if (rawData is Map) {
-        AppSessionService.setCurrentUser(Map<String, dynamic>.from(rawData));
+        await AppSessionService.setCurrentUser( // ← tambah await
+          Map<String, dynamic>.from(rawData),
+        );
       } else {
         // DEBUG: Kalau gagal masuk sini
         print('====== ERROR: DATA USER TIDAK DITEMUKAN ======');
@@ -68,7 +70,7 @@ class LoginController extends GetxController {
       final credential = await _googleAuthService.signInWithGoogle();
       final user = credential.user;
       if (user != null) {
-        AppSessionService.setCurrentUser({
+        await AppSessionService.setCurrentUser({ // ← tambah await
           'id_user': user.uid,
           'nama_lengkap': user.displayName ?? user.email ?? 'Pengguna',
           'email': user.email ?? '',
